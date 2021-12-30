@@ -1,9 +1,8 @@
 import regex
 import random
-import numpy as np
 import pandas as pd
 from generator import generate_sentence
-from word_predictor import get_top_k_predictions
+from word_predictor import get_bert_prediction
 
 
 def get_random_sentence() -> str:
@@ -13,7 +12,7 @@ def get_random_sentence() -> str:
     return df["sentence"].sample(1).item()
 
 
-def mask_random_word(input_sentence: str, generated_sentence: str) -> str:
+def mask_random_word(input_sentence: str, generated_sentence: str) -> (str, str):
     """
     Mask one of the words in the generated part of the sentence
 
@@ -30,10 +29,10 @@ def mask_random_word(input_sentence: str, generated_sentence: str) -> str:
 
     words = regex.findall("(\w+)", generated_part)
     words_indexed = list(enumerate(words))
-    mask_index = random.choice(words_indexed)[0]
+    mask_index, masked_word = random.choice(words_indexed)
 
     words[mask_index] = "[MASK]"
-    return input_sentence + "." + " ".join(words)
+    return input_sentence + " " + " ".join(words), masked_word
 
 
 if __name__ == "__main__":
@@ -43,15 +42,20 @@ if __name__ == "__main__":
 
     input_sentence = input_sentence if input_sentence != "" else get_random_sentence()
     generated_sentence = generate_sentence(input_sentence)
-    masked_sentence = mask_random_word(input_sentence, generated_sentence)
+    masked_sentence, target = mask_random_word(input_sentence, generated_sentence)
     print(f"Sentence: {masked_sentence}")
-    predictions = get_top_k_predictions(masked_sentence, 5)
 
-    winner = predictions[0]
-    guess = input(
-        f"Guess what BERT thinks is the masked word, possibilities: {np.random.permutation(predictions)}\n"
-    )
-    if guess == winner:
-        print("correct!")
+    predictions = get_bert_prediction(masked_sentence)
+    bert_prediction = predictions
+    guess = input("Guess the masked word:\n")
+    if guess.lower() == target.lower():
+        if bert_prediction.lower() == target.lower():
+            print(f"You're both correct!")
+        else:
+            print(f"You win! BERT thought it was '{bert_prediction}'")
     else:
-        print(f"not quite, it was '{winner}'")
+        if bert_prediction.lower() != target.lower():
+            print(
+                f"You're both wrong, it was '{target}'. BERT thought it was '{bert_prediction}'"
+            )
+        print(f"You lose, BERT got it right. It was '{target}'")

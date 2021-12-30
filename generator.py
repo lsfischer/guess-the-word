@@ -17,5 +17,11 @@ def generate_sentence(input_sentence: str) -> str:
         A new sentence containing the input sentence plus a generated one using GPT-2 and beam search
     """
     encoding = tokenizer(input_sentence, return_tensors="pt")
-    beam_output = model.generate(**encoding, num_beams=5, early_stopping=True)
+    beam_output = model.generate(
+        **encoding,
+        num_beams=5,
+        max_length=50,
+        no_repeat_ngram_size=2,
+        early_stopping=True
+    )
     return tokenizer.decode(beam_output[0], skip_special_tokens=True)
